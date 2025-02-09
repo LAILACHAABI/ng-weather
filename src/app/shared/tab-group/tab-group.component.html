@@ -1,0 +1,13 @@
+<div *ngIf="tabItems | async as entries" class="tabs__container">
+
+    <div class="tabs__header">
+        <div  class="tab__title"
+              *ngFor="let entry of entries; let i = index" (click)="selectTab(entry); selectedIndex = i" [class.active]="selectedIndex === i">
+            {{ entry.title }}
+            <span class="close-btn" (click)="remove(entry); selectTab(entries[0]); $event.stopPropagation()">X</span>
+        </div>
+    </div>
+    <div class="tab__content">
+        <ng-content></ng-content>
+    </div>
+</div>

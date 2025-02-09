@@ -1,35 +1,34 @@
-import { Injectable } from '@angular/core';
-import {BehaviorSubject} from 'rxjs';
+import { Injectable, inject } from '@angular/core';
+import { BehaviorSubject, Observable } from 'rxjs';
+import {CacheService} from './shared/cache.service';
 
-export const LOCATIONS : string = "locations";
+export const LOCATIONS: string = 'locations';
 
 @Injectable()
 export class LocationService {
 
+
   private locationsSubject = new BehaviorSubject<string[]>([]);
-  locations$ = this.locationsSubject.asObservable();
+  locations$: Observable<string[]> = this.locationsSubject.asObservable();
+  private cacheService = inject(CacheService);
 
   constructor() {
-    let locString = localStorage.getItem(LOCATIONS);
-    if (locString) {
-      const locations = JSON.parse(locString);
-      this.locationsSubject.next(locations);
-    }
+    let locations = this.cacheService.getItem(LOCATIONS) || [];
+    this.locationsSubject.next(locations);
   }
 
-  addLocation(zipcode : string) {
-    const currentLocations = this.locationsSubject.getValue();
+  addLocation(zipcode: string) {
+    const  currentLocations = this.locationsSubject.getValue();
     if (!currentLocations.includes(zipcode)) {
       const updatedLocations = [...currentLocations, zipcode];
       this.locationsSubject.next(updatedLocations);
-      localStorage.setItem(LOCATIONS, JSON.stringify(updatedLocations));
+      this.cacheService.setItem(LOCATIONS, updatedLocations);
     }
   }
 
-  removeLocation(zipcode : string) {
-    const currentLocations = this.locationsSubject.value;
-    const updatedLocations = currentLocations.filter(loc => loc !== zipcode);
+  removeLocation(zipcode: string) {
+    const updatedLocations = this.locationsSubject.value.filter((loc) => loc !== zipcode);
+    this.cacheService.setItem(LOCATIONS, updatedLocations);
     this.locationsSubject.next(updatedLocations);
-    localStorage.setItem(LOCATIONS, JSON.stringify(updatedLocations));
   }
 }

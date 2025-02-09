@@ -14,6 +14,7 @@ import {routing} from "./app.routing";
 import {HttpClientModule} from "@angular/common/http";
 import { ServiceWorkerModule } from '@angular/service-worker';
 import { environment } from '../environments/environment';
+import {TabGroupComponent} from './shared/tab-group/tab-group.component';
 
 @NgModule({
   declarations: [
@@ -23,15 +24,16 @@ import { environment } from '../environments/environment';
     CurrentConditionsComponent,
     MainPageComponent
   ],
-  imports: [
-    BrowserModule,
-    FormsModule,
-    HttpClientModule,
-    RouterModule,
-    routing,
-    ServiceWorkerModule.register('/ngsw-worker.js', { enabled: environment.production })
-  ],
-  providers: [LocationService, WeatherService],
+    imports: [
+        BrowserModule,
+        FormsModule,
+        HttpClientModule,
+        RouterModule,
+        routing,
+        ServiceWorkerModule.register('/ngsw-worker.js', {enabled: environment.production}),
+        TabGroupComponent
+    ],
+  providers: [LocationService, WeatherService  ],
   bootstrap: [AppComponent]
 })
 export class AppModule { }
