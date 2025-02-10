@@ -1,0 +1,27 @@
+<div class="tabs__header">
+    @for (tab of tabItems; track tab.id; let index = $index) {
+        <span
+                class="tabs__title"
+                [class.tab--active]="tab === activeTab()"
+                (click)="activateTab(tab)"
+        >
+      {{ tab.title }}
+            <span
+                    class="tabs__close"
+                    (click)="$event.stopPropagation(); removeTab(tab, index)"
+            >
+        &times;
+      </span>
+    </span>
+    }
+</div>
+
+<div class="tabs__content">
+    @if (activeTab(); as tab) {
+        <ng-template
+                [ngTemplateOutlet]="tab.templateRef"
+                [ngTemplateOutletContext]="{ content: tab.content }"
+        />
+    }
+</div>
+

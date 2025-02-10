@@ -1,33 +1,34 @@
-import { Injectable } from '@angular/core';
-import {WeatherService} from "./weather.service";
+import { Injectable, inject } from '@angular/core';
+import { BehaviorSubject, Observable } from 'rxjs';
+import { CacheService } from './cache.service';
 
-export const LOCATIONS : string = "locations";
+export const LOCATIONS: string = 'locations';
 
 @Injectable()
 export class LocationService {
 
-  locations : string[] = [];
 
-  constructor(private weatherService : WeatherService) {
-    let locString = localStorage.getItem(LOCATIONS);
-    if (locString)
-      this.locations = JSON.parse(locString);
-    for (let loc of this.locations)
-      this.weatherService.addCurrentConditions(loc);
+  private locationsSubject = new BehaviorSubject<string[]>([]);
+  locations$: Observable<string[]> = this.locationsSubject.asObservable();
+  private cacheService = inject(CacheService);
+
+  constructor() {
+    let locations = this.cacheService.getItem(LOCATIONS) || [];
+    this.locationsSubject.next(locations);
   }
 
-  addLocation(zipcode : string) {
-    this.locations.push(zipcode);
-    localStorage.setItem(LOCATIONS, JSON.stringify(this.locations));
-    this.weatherService.addCurrentConditions(zipcode);
-  }
-
-  removeLocation(zipcode : string) {
-    let index = this.locations.indexOf(zipcode);
-    if (index !== -1){
-      this.locations.splice(index, 1);
-      localStorage.setItem(LOCATIONS, JSON.stringify(this.locations));
-      this.weatherService.removeCurrentConditions(zipcode);
+  addLocation(zipcode: string) {
+    const  currentLocations = this.locationsSubject.getValue();
+    if (!currentLocations.includes(zipcode)) {
+      const updatedLocations = [...currentLocations, zipcode];
+      this.locationsSubject.next(updatedLocations);
+      this.cacheService.setItem(LOCATIONS, updatedLocations);
     }
+  }
+
+  removeLocation(zipcode: string) {
+    const updatedLocations = this.locationsSubject.value.filter((loc) => loc !== zipcode);
+    this.cacheService.setItem(LOCATIONS, updatedLocations);
+    this.locationsSubject.next(updatedLocations);
   }
 }
