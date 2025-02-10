@@ -1,4 +1,5 @@
 import {Injectable, Signal, signal} from '@angular/core';
+import {CacheService} from './shared/cache.service';
 
 export const LOCATIONS : string = "locations";
 
@@ -7,27 +8,56 @@ export class LocationService {
 
   locations = signal<string[]> (this.loadLocations());
 
-  constructor() {}
+  constructor(private cacheService: CacheService) {}
 
-  private loadLocations() : string[] {
-    let locString = localStorage.getItem(LOCATIONS);
-    return locString ? JSON.parse(locString) : [];
+  // Charger les emplacements depuis le cache ou localStorage
+  private loadLocations(): string[] {
+    const cacheKey = LOCATIONS;
+
+    // Vérifier si les données des emplacements sont en cache
+    const cachedLocations = this.cacheService.getFromCache<string[]>(cacheKey);
+    if (cachedLocations) {
+      return cachedLocations;
+    }
+
+    // Si les emplacements ne sont pas en cache, les charger depuis localStorage
+    const locString = localStorage.getItem(cacheKey);
+    const locations = locString ? JSON.parse(locString) : [];
+
+    // Mettre les emplacements dans le cache pour les prochaines utilisations
+    this.cacheService.setToCache(cacheKey, locations);
+    return locations;
   }
 
-  addLocation(zipcode : string) {
-    this.locations.update(locations => [...locations,zipcode]);
+  addLocation(zipcode: string): void {
+    this.locations.update(locations => {
+      const updatedLocations = [...locations, zipcode];
+      // Mettre à jour le cache des emplacements
+      this.cacheService.setToCache(LOCATIONS, updatedLocations);
+      return updatedLocations;
+    });
     this.saveLocations();
   }
 
-  removeLocation(zipcode : string) {
-    this.locations.update(locations => locations.filter(loc => loc !== zipcode));
+  removeLocation(zipcode: string): void {
+    this.locations.update(locations => {
+      const updatedLocations = locations.filter(loc => loc !== zipcode);
+      // Mettre à jour le cache des emplacements
+      this.cacheService.setToCache(LOCATIONS, updatedLocations);
+      return updatedLocations;
+    });
     this.saveLocations();
   }
 
+  // Sauvegarder les emplacements dans localStorage (aussi mis à jour dans le cache)
   private saveLocations(): void {
-    localStorage.setItem(LOCATIONS, JSON.stringify(this.locations()));
+    const locations = this.locations();
+    localStorage.setItem(LOCATIONS, JSON.stringify(locations));
+    // Mettre à jour les emplacements dans le cache
+    this.cacheService.setToCache(LOCATIONS, locations);
   }
 
+  // Récupérer les emplacements sous forme de signal
   getLocations(): Signal<string[]> {
     return this.locations.asReadonly();
   }

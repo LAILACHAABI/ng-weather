@@ -1,4 +1,4 @@
-import { Injectable, Signal, signal, effect } from '@angular/core';
+import {Injectable, Signal, signal, effect, inject} from '@angular/core';
 import {Observable} from 'rxjs';
 
 import {HttpClient} from '@angular/common/http';
@@ -6,6 +6,8 @@ import {CurrentConditions} from './current-conditions/current-conditions.type';
 import {ConditionsAndZip} from './conditions-and-zip.type';
 import {Forecast} from './forecasts-list/forecast.type';
 import {LocationService} from './location.service';
+import {CacheService} from './shared/cache.service';
+import {tap} from 'rxjs/operators';
 
 @Injectable()
 export class WeatherService {
@@ -14,8 +16,11 @@ export class WeatherService {
   static APPID = '5a4b2d457ecbef9eb2a71e480b947604';
   static ICON_URL = 'https://raw.githubusercontent.com/udacity/Sunshine-Version-2/sunshine_master/app/src/main/res/drawable-hdpi/';
   private currentConditions = signal<ConditionsAndZip[]>([]);
+  private locationService = inject(LocationService);
+  private cacheService = inject(CacheService);
+  private httpClient = inject(HttpClient);
 
-  constructor(private http: HttpClient, private locationService: LocationService) {
+  constructor() {
     // Écoute les changements des emplacements et met à jour les conditions météo
     effect(
         () => {
@@ -32,23 +37,59 @@ export class WeatherService {
 
 
   addCurrentConditions(zipcode: string): void {
-    // Here we make a request to get the current conditions data from the API. Note the use of backticks and an expression to insert the zipcode
-    this.http.get<CurrentConditions>(`${WeatherService.URL}/weather?zip=${zipcode},us&units=imperial&APPID=${WeatherService.APPID}`)
-      .subscribe(data => this.currentConditions.update(conditions => [...conditions, {zip: zipcode, data}]));
+    const cacheKey = `currentConditions_${zipcode}`;
+    // Vérifier si les données sont en cache
+    const cachedData = this.cacheService.getFromCache<CurrentConditions>(cacheKey);
+    if (cachedData) {
+      // Utiliser les données en cache
+      this.currentConditions.update(conditions => [...conditions, { zip: zipcode, data: cachedData }]);
+      return;
+    }
+
+    // Si les données ne sont pas en cache, effectuer la requête HTTP
+    this.httpClient.get<CurrentConditions>(
+        `${WeatherService.URL}/weather?zip=${zipcode},us&units=imperial&APPID=${WeatherService.APPID}`
+    ).subscribe({
+      next: (data) => {
+        // Mettre à jour le cache
+        this.cacheService.setToCache(cacheKey, data);
+        // Ajouter les données récupérées aux conditions actuelles
+        this.currentConditions.update(conditions => [...conditions, { zip: zipcode, data }]);
+      },
+      error: (error) => {
+
+        console.error(`Erreur lors de la récupération des conditions météo pour ${zipcode}:`, error);
+        this.locationService.removeLocation(zipcode);
+        alert(`Error while getting weather  ${zipcode}:`);
+
+      }
+    });
   }
 
-  removeCurrentConditions(zipcode: string): void {
-    this.currentConditions.update(conditions => conditions.filter(cond => cond.zip !== zipcode));
-  }
 
   getCurrentConditions(): Signal<ConditionsAndZip[]> {
     return this.currentConditions.asReadonly();
   }
 
   getForecast(zipcode: string): Observable<Forecast> {
-    // Here we make a request to get the forecast data from the API. Note the use of backticks and an expression to insert the zipcode
-    return this.http.get<Forecast>(`${WeatherService.URL}/forecast/daily?zip=${zipcode},us&units=imperial&cnt=5&APPID=${WeatherService.APPID}`);
+    const cacheKey = `forecast_${zipcode}`;
 
+    // Vérifier si les prévisions sont en cache
+    const cachedForecast = this.cacheService.getFromCache<Forecast>(cacheKey);
+    if (cachedForecast) {
+      // Retourner les prévisions en cache sous forme d'observable
+      return new Observable(observer => {
+        observer.next(cachedForecast);
+        observer.complete();
+      });
+    }
+
+    // Si les prévisions ne sont pas en cache, effectuer la requête HTTP
+    return this.httpClient.get<Forecast>(`${WeatherService.URL}/forecast/daily?zip=${zipcode},us&units=imperial&cnt=5&APPID=${WeatherService.APPID}`)
+        .pipe(tap(forecast => {
+          // Mettre à jour le cache
+          this.cacheService.setToCache(cacheKey, forecast);
+        }));
   }
 
   getWeatherIcon(id): string {
