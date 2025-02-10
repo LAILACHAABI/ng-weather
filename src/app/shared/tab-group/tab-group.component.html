@@ -1,0 +1,14 @@
+<div class="tabs-container">
+    <div class="tabs-header">
+        <div *ngFor="let tab of tabs"
+             class="tab-header"
+             [class.active]="tab.active"
+             (click)="selectTab(tab)">
+            <span>{{ tab.title }}</span>
+            <button class="close-btn" (click)="closeTab(tab, $event)">&times;</button>
+        </div>
+    </div>
+    <div class="tab-content">
+        <ng-content></ng-content>
+    </div>
+</div>

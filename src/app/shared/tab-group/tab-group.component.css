@@ -1,0 +1,39 @@
+.tabs-container {
+    border: 1px solid #ddd;
+    border-radius: 4px;
+}
+
+.tabs-header {
+    display: flex;
+    border-bottom: 1px solid #ddd;
+    background: #f5f5f5;
+}
+
+.tab-header {
+    padding: 10px 20px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.tab-header.active {
+    background: #fff;
+    border-bottom: 2px solid #007bff;
+}
+
+.close-btn {
+    border: none;
+    background: none;
+    cursor: pointer;
+    font-size: 16px;
+    padding: 0 5px;
+}
+
+.close-btn:hover {
+    color: red;
+}
+
+.tab-content {
+    padding: 15px;
+}
